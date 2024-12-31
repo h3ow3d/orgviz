@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Data Analysis</title>
+  <!-- Link to your unified CSS file -->
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+  <div class="container">
+    <h1>Data Analysis</h1>
+
+    <!-- Navigation bar -->
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/analysis">Data Analysis &amp; Reports</a></li>
+      <li><a href="/sankey_diagram">View Sankey Diagram</a></li>
+    </ul>
+
+    <!-- 
+      3-row, 2-column grid:
+        Row 1: metrics (col1), rarely (col2)
+        Row 2: similar (spanning col1-col2)
+        Row 3: suggestions (spanning col1-col2)
+    -->
+    <div class="analysis-grid">
+      
+      <!-- Row 1, Column 1: Metrics -->
+      <div class="analysis-block metrics">
+        <h2>Metrics</h2>
+        <ul>
+          <li>Total Accounts: {{ metrics.total_accounts }}</li>
+          <li>Total Groups: {{ metrics.total_groups }}</li>
+          <li>Total Permission Sets: {{ metrics.total_permission_sets }}</li>
+          <li>Total Policies Assigned: {{ metrics.total_policies_assigned }}</li>
+        </ul>
+      </div>
+
+      <!-- Row 1, Column 2: Rarely Used Policies -->
+      <div class="analysis-block rarely">
+        <h2>Rarely Used Policies</h2>
+        {% set rarely_used_policies = metrics.rarely_used_policy_details %}
+        {% if rarely_used_policies %}
+          <p>The following policies are only used once:</p>
+          <ul>
+            {% for policy_name, locations in rarely_used_policies.items() %}
+              <li>
+                <em>{{ policy_name }}</em>
+                <ul>
+                  {% for (acc_id, group_name) in locations %}
+                    <li>Account ID: {{ acc_id }}</li>
+                    <li>Group: {{ group_name }}</li>
+                  {% endfor %}
+                </ul>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>No rarely used policies found.</p>
+        {% endif %}
+      </div>
+
+      <!-- Row 2: Similar Permission Sets (spans both columns) -->
+      <div class="analysis-block similar-sets-block">
+        <h2>Similar Permission Sets</h2>
+        {% set pairs = metrics.similar_ps_pairs %}
+        {% if pairs %}
+          <p>Below are Permission Sets that share a high similarity:</p>
+
+          {# 
+            Each tuple is (psA, psB, sim, shared_policies_list).
+            e.g. ("AdminSet", "PowerUserSet", 0.8, ["AdministratorAccess", "PowerUserAccess"])
+          #}
+          {% set grouped = {} %}
+          {% for psA, psB, sim, shared_policies in pairs %}
+            {% if grouped[psA] is not defined %}
+              {% set _ = grouped.update({ psA: [] }) %}
+            {% endif %}
+            {% set _ = grouped[psA].append((psB, sim, shared_policies)) %}
+          {% endfor %}
+
+          <table class="similar-table">
+            <thead>
+              <tr>
+                <th>Permission Set</th>
+                <th>Similar Permission Set</th>
+                <th>Similar Policies</th>
+                <th>% Similarity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for base_ps, itemlist in grouped.items() %}
+                {% set rowcount = itemlist|length %}
+
+                {% for item in itemlist %}
+                  {% set sim_ps        = item[0] %}
+                  {% set simval       = item[1] %}
+                  {% set overlap_list = item[2] %}
+
+                  <tr>
+                    {% if loop.first %}
+                      <td rowspan="{{ rowcount }}">{{ base_ps }}</td>
+                    {% endif %}
+                    <td>{{ sim_ps }}</td>
+                    <td>
+                      {% if overlap_list %}
+                        {{ overlap_list | join(', ') }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td>{{ simval * 100 }}%</td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>No permission sets exceeded the chosen overlap threshold.</p>
+        {% endif %}
+      </div>
+
+      <!-- Row 3: Suggestions (spans both columns) -->
+      <div class="analysis-block suggestions">
+        <h2>Suggestions</h2>
+        {% if suggestions %}
+          <ul>
+            {% for suggestion in suggestions %}
+              <li>{{ suggestion }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>No suggestions at this time.</p>
+        {% endif %}
+      </div>
+
+    </div> <!-- End .analysis-grid -->
+  </div> <!-- End .container -->
+
+</body>
+</html>

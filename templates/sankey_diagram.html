@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sankey Diagram</title>
+
+  <!-- Plotly for Sankey -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link rel="stylesheet" href="/static/styles.css"/>
+</head>
+<body>
+  <div class="container">
+    <h1>Sankey Diagram</h1>
+
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/analysis">Data Analysis &amp; Reports</a></li>
+      <li><a href="/sankey_diagram">View Sankey Diagram</a></li>
+    </ul>
+
+    <!-- Filter section (4 columns) -->
+    <div class="filters">
+      <div class="filter">
+        <label for="account-filter">Accounts</label>
+        <select id="account-filter" multiple>
+          {% for account in account_options %}
+            <option value="{{ account }}">{{ account }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter">
+        <label for="group-filter">Groups</label>
+        <select id="group-filter" multiple>
+          {% for group in group_options %}
+            <option value="{{ group }}">{{ group }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter">
+        <label for="permission-set-filter">Permission Sets</label>
+        <select id="permission-set-filter" multiple>
+          {% for ps in permission_set_options %}
+            <option value="{{ ps }}">{{ ps }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter">
+        <label for="policy-filter">Policies</label>
+        <select id="policy-filter" multiple>
+          {% for policy in policy_options %}
+            <option value="{{ policy }}">{{ policy }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button id="apply-filters">Apply Filters</button>
+      <button id="reset-filters">Reset Filters</button>
+    </div>
+
+    <div id="sankey-container"></div>
+  </div>
+
+  <script>
+    async function generateSankey(filters = {}) {
+      const response = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objects: filters })
+      });
+      const data = await response.json();
+      Plotly.newPlot("sankey-container", data);
+    }
+
+    function collectFilters() {
+      return {
+        accounts: Array.from(document.getElementById("account-filter").selectedOptions).map(opt => opt.value),
+        groups: Array.from(document.getElementById("group-filter").selectedOptions).map(opt => opt.value),
+        permission_sets: Array.from(document.getElementById("permission-set-filter").selectedOptions).map(opt => opt.value),
+        policies: Array.from(document.getElementById("policy-filter").selectedOptions).map(opt => opt.value),
+      };
+    }
+
+    document.getElementById("apply-filters").addEventListener("click", () => {
+      const filters = collectFilters();
+      generateSankey(filters);
+    });
+
+    document.getElementById("reset-filters").addEventListener("click", () => {
+      document.getElementById("account-filter").selectedIndex = -1;
+      document.getElementById("group-filter").selectedIndex = -1;
+      document.getElementById("permission-set-filter").selectedIndex = -1;
+      document.getElementById("policy-filter").selectedIndex = -1;
+      generateSankey({});
+    });
+
+    window.onload = () => generateSankey({});
+  </script>
+</body>
+</html>
